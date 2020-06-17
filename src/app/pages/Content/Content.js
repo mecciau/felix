@@ -1,82 +1,37 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useRef, useEffect } from "react";
+import { connect } from "react-redux";
 import Movies from "../../components/Movies/Movies";
+import useFetch from "../../hooks/useFetch";
 
-const Content = ({ favorite, setFavorite }) => {
-  const [movies, setMovies] = useState([]);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+import content from "../../state/content";
 
-  const fetchMovies = useCallback(async () => {
-    setLoading(true);
-    const response = await fetch(
-      "https://academy-video-api.herokuapp.com/content/items",
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          authorization: localStorage.authorization,
-        },
-      }
-    );
-    if (!response.ok) {
-      return setError("Error while fetching movies");
-    }
-    setMovies(await response.json());
-    setLoading(false);
-  }, [setError, setMovies, setLoading]);
+const Content = ({ token, movies, setMovies }) => {
+  const headersRef = useRef({
+    authorization: token,
+  });
+
+  const { loading, error, payload } = useFetch({
+    endpoint: `content/items`,
+    headers: headersRef.current,
+  });
 
   useEffect(() => {
-    fetchMovies();
-  }, [fetchMovies]);
-  return (
-    <Movies
-      movies={movies}
-      loading={loading}
-      error={error}
-      favorite={favorite}
-      setFavorite={setFavorite}
-    />
-  );
+    if (payload) setMovies(payload);
+  }, [setMovies, payload]);
+  return <Movies movies={movies} loading={loading} error={error} />;
 };
 
-// class Content extends Component {
-//   state = {
-//     movies: [],
-//     error: "",
-//     loading: false,
-//   };
+const mapDispatchToProps = (dispatch) => {
+  return {
+    setMovies: (movies) => dispatch({ type: content.types.SET_MOVIES, movies }),
+  };
+};
 
-//   async componentDidMount() {
-//     this.setState({ loading: true });
-//     const response = await fetch(
-//       "https://academy-video-api.herokuapp.com/content/items",
-//       {
-//         method: "GET",
-//         headers: {
-//           "Content-Type": "application/json",
-//           authorization: localStorage.authorization,
-//         },
-//       }
-//     );
-//     if (!response.ok) {
-//       return this.setState({ error: "Error while fetching movies" });
-//     }
-//     const movies = await response.json();
-//     this.setState({ movies: movies });
-//     this.setState({ loading: false });
-//   }
+const mapStateToProps = ({ authentication, content }) => {
+  return {
+    token: authentication.token,
+    movies: content.movies,
+  };
+};
 
-//   render() {
-//     return (
-//       <Movies
-//         movies={this.state.movies}
-//         loading={this.state.loading}
-//         error={this.state.error}
-//         favorite={this.props.favorite}
-//         setFavorite={this.props.setFavorite}
-//       />
-//     );
-//   }
-// }
-
-export default Content;
+export default connect(mapStateToProps, mapDispatchToProps)(Content);

@@ -1,44 +1,43 @@
-import React, { useState, useEffect, useCallback, Fragment } from "react";
+import React, { useState, Fragment, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { connect } from "react-redux";
+
 import Button from "../../components/Button/Button";
 import FavoriteButton from "../../components/FavoriteButton/FavoriteButton";
+
+import useFetch from "../../hooks/useFetch";
+
+import content from "../../state/content";
+
 import "./Movie.scss";
 
-const Movie = ({ favorite, setFavorite }) => {
+const Movie = ({ token, getMovie, setError, globalLoading, setLoading }) => {
+  const headersRef = useRef({
+    authorization: token,
+  });
   const { movieId } = useParams();
 
-  const [movie, setMovie] = useState({});
-  const [error, setError] = useState("");
   const [watch, setWatch] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const getMovie = useCallback(async () => {
-    setLoading(true);
-    const response = await fetch(
-      `https://academy-video-api.herokuapp.com/content/items/${movieId}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    if (!response.ok) return setError("Error while fetching movie");
-    const movieObj = await response.json();
-
-    setMovie(movieObj);
-    setLoading(false);
-  }, [setMovie, movieId]);
+  const [movie, setMovie] = useState(getMovie(movieId));
+  const { payload, error, loading } = useFetch({
+    endpoint: `content/items/${movieId}`,
+    headers: headersRef.current,
+    shouldFetch: !movie,
+  });
 
   useEffect(() => {
-    getMovie();
-  }, [getMovie]);
+    if (payload) {
+      setMovie(payload);
+      setError(error);
+      setLoading(loading);
+    }
+  }, [setMovie, payload, setError, error, setLoading, loading]);
 
   const toggleModal = () => setWatch((prevState) => !prevState);
   return (
     <div className="section movie-section">
       <div className="container">
-        {!error && !loading && (
+        {!!movie && !error && !loading && (
           <Fragment>
             <article className="media">
               <figure className="media-left">
@@ -54,11 +53,7 @@ const Movie = ({ favorite, setFavorite }) => {
                   <h2 className="title has-text-white">{movie.title}</h2>
                   <p className="subtitle has-text-white">{movie.description}</p>
                   <Button onClick={toggleModal}>Watch</Button>
-                  <FavoriteButton
-                    favorite={favorite}
-                    setFavorite={setFavorite}
-                    movieId={movie.id}
-                  />
+                  <FavoriteButton movieId={movie.id} />
                 </div>
               </div>
             </article>
@@ -79,12 +74,36 @@ const Movie = ({ favorite, setFavorite }) => {
         )}
 
         {loading && !error && (
-          <h3 className="has-text-white has-text-centered">Loading movie...</h3>
+          <div>
+            <h3 className="has-text-white has-text-centered">
+              Loading movie...
+            </h3>
+          </div>
         )}
-        {error && <h3 className="has-text-white has-text-centered">{error}</h3>}
+        {error && (
+          <div>
+            <h3 className="has-text-white has-text-centered">{error}</h3>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
-export default Movie;
+const mapDispatchToProps = (dispatch) => {
+  return {
+    setError: (error) => dispatch({ type: content.types.SET_ERROR, error }),
+    setLoading: (loading) =>
+      dispatch({ type: content.types.SET_LOADING, loading }),
+  };
+};
+
+const mapStateToProps = ({ authentication, content }) => {
+  return {
+    token: authentication.token,
+    getMovie: (movieId) => content.movies.find((movie) => movie.id === movieId),
+    globalLoading: content.loading,
+  };
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(Movie);

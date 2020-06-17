@@ -1,24 +1,37 @@
 import React from "react";
+import { connect } from "react-redux";
+import { bindActionCreators } from "redux";
+
+import content from "../../state/content";
+
 import "./FavoriteButton.scss";
 
-const FavoriteButton = ({ movieId, favorite, setFavorite }) => {
-  const onClick = () => {
-    setFavorite((prevState) => {
-      if (!prevState.includes(movieId)) {
-        return [...prevState, movieId];
-      } else {
-        return prevState.filter((id) => id !== movieId);
-      }
-    });
-  };
+const FavoriteButton = ({ movieId, isFavorite, toggleFavorite }) => {
+  const onClick = () => toggleFavorite(movieId);
   return (
     <button
       className="button is-primary has-text-weight-bold favorite-button"
       onClick={onClick}
     >
-      {!!favorite && favorite.includes(movieId) ? "Remove 💔" : "Favorite"}
+      {isFavorite ? "Remove 💔" : "Favorite"}
     </button>
   );
 };
 
-export default FavoriteButton;
+const mapStateToProps = (state, { movieId }) => {
+  return {
+    isFavorite: content.selectors.isFavoriteById(state, movieId),
+  };
+};
+
+const mapDispatchToProps = (dispatch) => {
+  return {
+    // toggleFavorite: (id) => dispatch({ type: types.TOGGLE_FAVORITE, id }),
+    toggleFavorite: bindActionCreators(
+      content.actions.toggleFavorite,
+      dispatch
+    ),
+  };
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(FavoriteButton);

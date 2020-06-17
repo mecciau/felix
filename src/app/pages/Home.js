@@ -1,44 +1,28 @@
-import React, { Fragment, useState, useEffect, useCallback } from "react";
+import React, { Fragment, useEffect } from "react";
+import { connect } from "react-redux";
+import useFetch from "../hooks/useFetch";
+
+import content from "../state/content";
 
 import Hero from "../components/Hero/Hero";
 import Movies from "../components/Movies/Movies";
 import Button from "../components/Button/Button";
 
-const Home = ({ favorite, setFavorite }) => {
-  const [movies, setMovies] = useState([]);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const fetchMovies = useCallback(async () => {
-    setLoading(true);
-    const response = await fetch(
-      "https://academy-video-api.herokuapp.com/content/free-items",
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    if (!response.ok) return setError("Error while fetching movies");
-    setMovies(await response.json());
-    setLoading(false);
-  }, [setError, setMovies, setLoading]);
+const Home = ({ setMovies, setError, setLoading, movies, globalLoading }) => {
+  const { loading, error, payload } = useFetch({
+    endpoint: `content/free-items`,
+  });
 
   useEffect(() => {
-    fetchMovies();
-  }, [fetchMovies]);
+    if (payload) setMovies(payload);
+    if (error) setError(error);
+    if (loading !== globalLoading) setLoading(loading);
+  }, [setMovies, setError, setLoading, loading, error, payload, globalLoading]);
 
   return (
     <Fragment>
       <Hero />
-      <Movies
-        movies={movies}
-        loading={loading}
-        error={error}
-        favorite={favorite}
-        setFavorite={setFavorite}
-      >
+      <Movies movies={movies} loading={loading} error={error}>
         <div className="has-text-centered">
           <Button>Get More Content</Button>
         </div>
@@ -46,47 +30,20 @@ const Home = ({ favorite, setFavorite }) => {
     </Fragment>
   );
 };
+const mapStateToProps = ({ content }) => {
+  return {
+    movies: content.movies,
+    globalLoading: content.loading,
+  };
+};
+const mapDispatchToProps = (dispatch) => {
+  return {
+    setMovies: (movies) => dispatch({ type: content.types.SET_MOVIES, movies }),
+    setError: (error) => dispatch({ type: content.types.SET_ERROR, error }),
+    setLoading: (loading) =>
+      dispatch({ type: content.types.SET_LOADING, loading }),
+  };
+};
 
-// class Home extends Component {
-//   state = {
-//     movies: [],
-//     error: "",
-//     loading: false,
-//   };
-//   async componentDidMount() {
-//     this.setState({ loading: true });
-//     const response = await fetch(
-//       "https://academy-video-api.herokuapp.com/content/free-items",
-//       {
-//         method: "GET",
-//         headers: {
-//           "Content-Type": "application/json",
-//         },
-//       }
-//     );
-//     if (!response.ok)
-//       return this.setState({ error: "Error while fetching movies" });
-//     this.setState({ movies: await response.json() });
-//     this.setState({ loading: false });
-//   }
-//   render() {
-//     return (
-//       <Fragment>
-//         <Hero />
-//         <Movies
-//           movies={this.state.movies}
-//           loading={this.state.loading}
-//           error={this.state.error}
-//           favorite={this.props.favorite}
-//           setFavorite={this.props.setFavorite}
-//         >
-//           <div className="has-text-centered">
-//             <Button>Get More Content</Button>
-//           </div>
-//         </Movies>
-//       </Fragment>
-//     );
-//   }
-// }
-
-export default Home;
+export default connect(mapStateToProps, mapDispatchToProps)(Home);
+// export default Home;

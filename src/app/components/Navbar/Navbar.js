@@ -1,35 +1,34 @@
 import React, { useState, Fragment } from "react";
+import { connect } from "react-redux";
+import { bindActionCreators } from "redux";
 import { Link, useHistory } from "react-router-dom";
 import Button from "../Button/Button";
+
+import authentication from "../../state/authentication/index";
 
 import logo from "../../images/logo.svg";
 import "./Navbar.scss";
 
-const Navbar = () => {
+const Navbar = ({ token, logout }) => {
   let history = useHistory();
   const [burger, setBurger] = useState(false);
-  const [auth, setAuth] = useState(
-    localStorage.getItem("authorization") ? true : false
-  );
 
   const onClick = () => setBurger((prevState) => !prevState);
 
-  const logout = async () => {
-    await fetch("https://academy-video-api.herokuapp.com/auth/logout", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        token: localStorage.getItem("authorization"),
-      }),
-    });
-    localStorage.removeItem("authorization");
-    setAuth(false);
-    history.replace("/");
-  };
-
-  console.log(auth);
+  // const logout = async () => {
+  //   await fetch("https://academy-video-api.herokuapp.com/auth/logout", {
+  //     method: "POST",
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //     },
+  //     body: JSON.stringify({
+  //       token: localStorage.getItem("authToken"),
+  //     }),
+  //   });
+  //   localStorage.removeItem("authToken");
+  //   logoutUser();
+  //   history.replace("/");
+  // };
 
   return (
     <nav className="navbar is-fixed-top has-background-black">
@@ -60,10 +59,10 @@ const Navbar = () => {
         <div className="navbar-end">
           <div className="navbar-item">
             <div className="buttons">
-              {auth ? (
+              {!!token ? (
                 <Fragment>
                   <Button linkTo="/content">Content</Button>
-                  <Button onClick={logout}>Logout</Button>
+                  <Button onClick={() => logout(token)}>Logout</Button>
                 </Fragment>
               ) : (
                 <Button linkTo="/login">Login</Button>
@@ -76,4 +75,16 @@ const Navbar = () => {
   );
 };
 
-export default Navbar;
+const mapStateToProps = ({ authentication: { token } }) => {
+  return {
+    token,
+  };
+};
+const mapDispatchToProps = (dispatch) => {
+  return {
+    logout: bindActionCreators(authentication.actions.logout, dispatch),
+    // logoutUser: () => dispatch({ type: content.types.USER_LOGOUT }),
+  };
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(Navbar);
